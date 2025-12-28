@@ -18,6 +18,14 @@ class Game {
             right: false
         };
 
+        // Mobile detection
+        this.isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        this.isPortrait = window.innerHeight > window.innerWidth;
+        this.scaleFactor = 1;
+        this.tiltEnabled = false;
+        this.currentTilt = 0;
+        this.touchActive = false;
+
         this.landingPad = {
             x: 0,
             y: 0,
@@ -88,8 +96,110 @@ class Game {
         // Populate start menu level selector
         this.updateStartMenuLevelSelect();
 
+        // Initialize mobile controls
+        if (this.isMobile) {
+            this.initTouchControls();
+            this.initTiltControls();
+            this.setupMobileUI();
+        }
+
         // Start animation loop
         this.animate();
+    }
+
+    initTouchControls() {
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.touchActive = true;
+            this.keys.up = true;
+
+            // Start game if in 'ready' state
+            if (this.gameState === 'ready') {
+                this.gameState = 'playing';
+                soundManager.startThrust();
+            }
+
+            // Retry level if crashed
+            if (this.gameState === 'lost') {
+                this.retryCurrentLevel();
+            }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.touchActive = false;
+            this.keys.up = false;
+            soundManager.stopThrust();
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchcancel', (e) => {
+            this.touchActive = false;
+            this.keys.up = false;
+            soundManager.stopThrust();
+        });
+    }
+
+    initTiltControls() {
+        window.addEventListener('deviceorientation', (e) => {
+            if (!this.tiltEnabled) return;
+            if (this.gameState !== 'playing' && this.gameState !== 'ready') return;
+
+            // gamma = left/right tilt (-90 to 90 degrees)
+            this.currentTilt = e.gamma || 0;
+
+            // Dead zone to avoid unintended movement
+            const deadZone = 5;
+
+            if (Math.abs(this.currentTilt) < deadZone) {
+                this.keys.left = false;
+                this.keys.right = false;
+            } else if (this.currentTilt < -deadZone) {
+                this.keys.left = true;
+                this.keys.right = false;
+            } else if (this.currentTilt > deadZone) {
+                this.keys.left = false;
+                this.keys.right = true;
+            }
+        });
+    }
+
+    async requestMotionPermission() {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                return permission === 'granted';
+            } catch (e) {
+                console.error('Motion permission denied:', e);
+                return false;
+            }
+        }
+        // Android / older iOS - no permission needed
+        return true;
+    }
+
+    setupMobileUI() {
+        // Show mobile elements, hide desktop elements
+        document.querySelectorAll('.desktop-only').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.mobile-only').forEach(el => el.style.display = 'block');
+
+        // Setup motion permission button
+        const motionBtn = document.getElementById('enable-motion-btn');
+        if (motionBtn) {
+            motionBtn.style.display = 'block';
+
+            motionBtn.addEventListener('click', async () => {
+                const granted = await this.requestMotionPermission();
+                if (granted) {
+                    this.tiltEnabled = true;
+                    motionBtn.textContent = 'Styring aktivert! ✓';
+                    motionBtn.disabled = true;
+                    motionBtn.classList.add('enabled');
+                } else {
+                    motionBtn.textContent = 'Ikke tilgjengelig';
+                    motionBtn.disabled = true;
+                }
+            });
+        }
     }
 
     updateStartMenuLevelSelect() {
@@ -125,7 +235,23 @@ class Game {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+        this.isPortrait = window.innerHeight > window.innerWidth;
+
+        // Calculate scale factor based on screen width
+        const baseWidth = 800;  // Reference width (desktop)
+        this.scaleFactor = Math.min(1, this.canvas.width / baseWidth);
+
+        // Mobile portrait: scale down further
+        if (this.isMobile && this.isPortrait) {
+            this.scaleFactor *= 0.7;
+        }
+
         this.groundHeight = Math.min(120, this.canvas.height * 0.15);
+
+        // Update spaceship scale if exists
+        if (this.spaceship) {
+            this.spaceship.setScale(this.scaleFactor);
+        }
     }
 
     generateStars() {
@@ -258,21 +384,32 @@ class Game {
         this.generateLevelFeatures();
         this.generateStars();
 
+        // Set landing pad width - scale for mobile portrait
+        let padWidth = this.currentLevel.landingPadWidth;
+        if (this.isMobile && this.isPortrait) {
+            // Make platform relative to screen width (28-35%)
+            padWidth = Math.max(80, this.canvas.width * 0.30);
+        }
+        this.landingPad.width = padWidth;
+
         // Set landing pad position (use level's position or default to center)
-        this.landingPad.width = this.currentLevel.landingPadWidth;
         const padPosition = this.currentLevel.landingPadPosition !== undefined
             ? this.currentLevel.landingPadPosition
             : 0.5;
         // Calculate x position with padding from edges
-        const padding = 50;
+        const padding = this.isMobile ? 30 : 50;
         const availableWidth = this.canvas.width - padding * 2 - this.landingPad.width;
         this.landingPad.x = padding + (availableWidth * padPosition);
         this.landingPad.baseX = this.landingPad.x;  // Store base position for moving platforms
         this.landingPad.y = this.canvas.height - this.groundHeight;
 
-        // Moving platform settings
+        // Moving platform settings - reduce range on mobile portrait
         this.landingPad.moveSpeed = this.currentLevel.movingPlatform?.speed || 0;
-        this.landingPad.moveRange = this.currentLevel.movingPlatform?.range || 0;
+        let moveRange = this.currentLevel.movingPlatform?.range || 0;
+        if (this.isMobile && this.isPortrait && moveRange > 0) {
+            moveRange = Math.min(moveRange, (this.canvas.width - this.landingPad.width - padding * 2) / 2);
+        }
+        this.landingPad.moveRange = moveRange;
 
         // Clear explosion
         this.isExploding = false;
@@ -284,6 +421,7 @@ class Game {
             80
         );
         this.spaceship.fuel = this.currentLevel.startFuel;
+        this.spaceship.setScale(this.scaleFactor);
 
         // Update UI
         const levelNameEl = document.getElementById('level-name');
@@ -608,13 +746,17 @@ class Game {
         }
         levelsHtml += '</div>';
 
+        const retryHint = this.isMobile
+            ? 'Trykk på skjermen for å prøve igjen!'
+            : 'Trykk ↑ for å prøve igjen raskt!';
+
         box.innerHTML = `
             <h2 id="message-title" style="color: #ff6b6b;">Oj!</h2>
             <p id="message-text">${reason}</p>
             <p style="margin: 15px 0; color: #dfe6e9;">Velg nivå:</p>
             ${levelsHtml}
             <button class="big-button" onclick="game.retryCurrentLevel()" style="margin-top: 20px;">Prøv igjen</button>
-            <p style="margin-top: 15px; color: #74b9ff; font-size: 0.9rem;">Trykk ↑ for å prøve igjen raskt!</p>
+            <p style="margin-top: 15px; color: #74b9ff; font-size: 0.9rem;">${retryHint}</p>
         `;
 
         overlay.classList.remove('hidden');
@@ -732,10 +874,15 @@ class Game {
         // Pulsing animation
         const pulse = 0.8 + 0.2 * Math.sin(Date.now() / 300);
 
+        // Different text and size for mobile
+        const message = this.isMobile ? 'Trykk for å starte!' : 'Trykk ↑ for å starte!';
+        const boxWidth = this.isMobile ? 280 : 360;
+        const fontSize = this.isMobile ? 24 : 28;
+
         // Background box
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.beginPath();
-        this.ctx.roundRect(centerX - 180, centerY - 50, 360, 100, 20);
+        this.ctx.roundRect(centerX - boxWidth/2, centerY - 50, boxWidth, 100, 20);
         this.ctx.fill();
 
         // Border
@@ -745,10 +892,10 @@ class Game {
 
         // Text
         this.ctx.fillStyle = `rgba(255, 215, 0, ${pulse})`;
-        this.ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
+        this.ctx.font = `bold ${fontSize}px "Comic Sans MS", sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('Trykk ↑ for å starte!', centerX, centerY);
+        this.ctx.fillText(message, centerX, centerY);
     }
 
     drawAltitudeIndicator() {

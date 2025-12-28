@@ -653,3 +653,192 @@ body {
         padding: 10px 6px;
     }
 }
+
+/* ========================================
+   MOBILE SUPPORT
+   ======================================== */
+
+/* Motion permission button */
+.motion-btn {
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 15px 0;
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+    transition: all 0.3s ease;
+}
+
+.motion-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.5);
+}
+
+.motion-btn:active {
+    transform: translateY(0);
+}
+
+.motion-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.motion-btn.enabled {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+}
+
+/* Prevent touch gestures on canvas */
+#game-canvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Mobile portrait mode */
+@media (max-width: 480px) and (orientation: portrait) {
+    .start-screen h1.title {
+        font-size: clamp(1.8rem, 10vw, 2.5rem);
+        margin-bottom: 10px;
+    }
+
+    .menu-rocket {
+        transform: scale(0.7);
+    }
+
+    .rocket-animation {
+        margin: 10px 0;
+    }
+
+    .big-button {
+        padding: 12px 24px;
+        font-size: 1rem;
+        min-width: 140px;
+    }
+
+    .motion-btn {
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+
+    .level-select-label {
+        font-size: 0.9rem;
+        margin-top: 15px;
+    }
+
+    .level-select-grid {
+        grid-template-columns: repeat(3, 50px);
+        gap: 8px;
+        max-width: 200px;
+    }
+
+    .level-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 0.9rem;
+        padding: 8px 4px;
+    }
+
+    .level-btn small {
+        font-size: 0.5rem;
+    }
+
+    .instructions {
+        font-size: 0.9rem;
+        padding: 0 15px;
+        margin: 10px 0;
+    }
+
+    #ui-overlay {
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+
+    #level-name {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+    }
+
+    #level-name::before {
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        font-size: 0.9rem;
+        margin-right: 6px;
+    }
+
+    #stats {
+        gap: 10px;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+    }
+
+    .stat-value {
+        font-size: 1rem;
+    }
+
+    #fuel-bar {
+        width: 60px;
+        height: 12px;
+    }
+
+    .message-box {
+        width: 95%;
+        padding: 15px;
+        margin: 10px;
+    }
+
+    .message-box h2 {
+        font-size: 1.5rem;
+    }
+
+    .message-box p {
+        font-size: 0.9rem;
+    }
+
+    /* Smaller level select in crash overlay */
+    .message-box .level-select-grid {
+        grid-template-columns: repeat(3, 45px);
+        gap: 6px;
+    }
+
+    .message-box .level-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Landscape mobile - similar to desktop but slightly smaller */
+@media (max-height: 500px) and (orientation: landscape) {
+    .start-screen h1.title {
+        font-size: 2rem;
+        margin-bottom: 5px;
+    }
+
+    .rocket-animation {
+        transform: scale(0.6);
+        margin: 5px 0;
+    }
+
+    .level-select-grid {
+        grid-template-columns: repeat(5, 50px);
+    }
+
+    #ui-overlay {
+        padding: 5px 10px;
+    }
+}
+
+/* Hide arrow keys on all mobile */
+@media (max-width: 768px) {
+    .arrow-keys.desktop-only {
+        display: none !important;
+    }
+}

@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Romskip-Landing!</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -25,17 +25,26 @@
             </div>
             <button id="start-button" class="big-button">START SPILLET</button>
 
+            <!-- Mobile: Motion permission button -->
+            <button id="enable-motion-btn" class="mobile-only motion-btn" style="display: none;">
+                Aktiver bevegelsesstyring
+            </button>
+
             <p class="level-select-label">Eller velg nivå:</p>
             <div id="start-level-select" class="level-select-grid"></div>
 
-            <p class="instructions">Bruk piltastene til å styre romskipet!</p>
-            <div class="arrow-keys">
+            <!-- Desktop instructions -->
+            <p class="instructions desktop-only">Bruk piltastene til å styre romskipet!</p>
+            <div class="arrow-keys desktop-only">
                 <div class="key up-key">↑</div>
                 <div class="key-row">
                     <div class="key">←</div>
                     <div class="key">→</div>
                 </div>
             </div>
+
+            <!-- Mobile instructions -->
+            <p class="instructions mobile-only" style="display: none;">Vipp telefonen for å styre<br>Trykk på skjermen for drivstoff!</p>
         </div>
 
         <!-- Game Screen -->

@@ -6,8 +6,11 @@ class Spaceship {
         this.velocityX = 0;
         this.velocityY = 0;
         this.angle = 0;          // Rotation in degrees
+        this.baseWidth = 40;
+        this.baseHeight = 60;
         this.width = 40;
         this.height = 60;
+        this.scale = 1;
         this.fuel = 100;
         this.isThrusting = false;
         this.flameSize = 0;
@@ -21,6 +24,12 @@ class Spaceship {
 
         // Sad state (when missing platform)
         this.isSad = false;
+    }
+
+    setScale(factor) {
+        this.scale = factor;
+        this.width = this.baseWidth * factor;
+        this.height = this.baseHeight * factor;
     }
 
     reset(x, y, fuel = 100) {
@@ -109,6 +118,8 @@ class Spaceship {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle * Math.PI / 180);
 
+        const s = this.scale;  // Scale factor for fixed dimensions
+
         // Draw flame if thrusting
         if (this.flameSize > 0) {
             this.drawFlame(ctx);
@@ -117,7 +128,7 @@ class Spaceship {
         // Rocket body
         ctx.fillStyle = '#ff6b6b';
         ctx.strokeStyle = '#c0392b';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * s;
 
         // Main body (rounded rectangle shape)
         ctx.beginPath();
@@ -134,17 +145,17 @@ class Spaceship {
         ctx.fillStyle = '#ee5a5a';
         ctx.beginPath();
         ctx.moveTo(-this.width/4, -this.height/3);
-        ctx.quadraticCurveTo(0, -this.height/2 - 10, this.width/4, -this.height/3);
+        ctx.quadraticCurveTo(0, -this.height/2 - 10 * s, this.width/4, -this.height/3);
         ctx.closePath();
         ctx.fill();
 
         // Left fin
         ctx.fillStyle = '#fdcb6e';
         ctx.strokeStyle = '#e67e22';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * s;
         ctx.beginPath();
         ctx.moveTo(-this.width/2, this.height/4);
-        ctx.lineTo(-this.width/2 - 12, this.height/2 + 5);
+        ctx.lineTo(-this.width/2 - 12 * s, this.height/2 + 5 * s);
         ctx.lineTo(-this.width/4, this.height/3);
         ctx.closePath();
         ctx.fill();
@@ -153,7 +164,7 @@ class Spaceship {
         // Right fin
         ctx.beginPath();
         ctx.moveTo(this.width/2, this.height/4);
-        ctx.lineTo(this.width/2 + 12, this.height/2 + 5);
+        ctx.lineTo(this.width/2 + 12 * s, this.height/2 + 5 * s);
         ctx.lineTo(this.width/4, this.height/3);
         ctx.closePath();
         ctx.fill();
@@ -166,106 +177,109 @@ class Spaceship {
     }
 
     drawWindow(ctx) {
+        const s = this.scale;
+
         // Window background
         ctx.fillStyle = '#74b9ff';
         ctx.strokeStyle = '#2d3436';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * s;
 
         ctx.beginPath();
-        ctx.arc(0, -5, 14, 0, Math.PI * 2);
+        ctx.arc(0, -5 * s, 14 * s, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
         // Window shine
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
-        ctx.arc(-4, -8, 5, 0, Math.PI * 2);
+        ctx.arc(-4 * s, -8 * s, 5 * s, 0, Math.PI * 2);
         ctx.fill();
 
         if (this.isSad) {
             // Sad eyes - looking down
             ctx.fillStyle = '#2d3436';
             ctx.beginPath();
-            ctx.ellipse(-5, -3, 3, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(-5 * s, -3 * s, 3 * s, 3 * s, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(5, -3, 3, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(5 * s, -3 * s, 3 * s, 3 * s, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Sad eyebrows
             ctx.strokeStyle = '#2d3436';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * s;
             ctx.beginPath();
-            ctx.moveTo(-8, -8);
-            ctx.lineTo(-2, -6);
+            ctx.moveTo(-8 * s, -8 * s);
+            ctx.lineTo(-2 * s, -6 * s);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(8, -8);
-            ctx.lineTo(2, -6);
+            ctx.moveTo(8 * s, -8 * s);
+            ctx.lineTo(2 * s, -6 * s);
             ctx.stroke();
 
             // Sad mouth
             ctx.beginPath();
-            ctx.arc(0, 3, 4, 0.2 * Math.PI, 0.8 * Math.PI, true);
+            ctx.arc(0, 3 * s, 4 * s, 0.2 * Math.PI, 0.8 * Math.PI, true);
             ctx.stroke();
 
             // Tear drops
             ctx.fillStyle = '#74b9ff';
             ctx.beginPath();
-            ctx.ellipse(-6, 2, 2, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(-6 * s, 2 * s, 2 * s, 3 * s, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(6, 4, 2, 2.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(6 * s, 4 * s, 2 * s, 2.5 * s, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
             // Normal happy eyes
             ctx.fillStyle = '#2d3436';
             ctx.beginPath();
-            ctx.ellipse(-5 + this.eyeOffset, -5, 3, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(-5 * s + this.eyeOffset, -5 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.beginPath();
-            ctx.ellipse(5 + this.eyeOffset, -5, 3, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(5 * s + this.eyeOffset, -5 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Eye shine
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.arc(-4 + this.eyeOffset, -6, 1.5, 0, Math.PI * 2);
+            ctx.arc(-4 * s + this.eyeOffset, -6 * s, 1.5 * s, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(6 + this.eyeOffset, -6, 1.5, 0, Math.PI * 2);
+            ctx.arc(6 * s + this.eyeOffset, -6 * s, 1.5 * s, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
     drawFlame(ctx) {
-        const flameHeight = this.flameSize + 15;
+        const s = this.scale;
+        const flameHeight = (this.flameSize + 15) * s;
 
         // Outer flame (orange/red)
         ctx.fillStyle = '#e74c3c';
         ctx.beginPath();
-        ctx.moveTo(-12, this.height/3);
-        ctx.quadraticCurveTo(-8, this.height/3 + flameHeight/2, 0, this.height/3 + flameHeight);
-        ctx.quadraticCurveTo(8, this.height/3 + flameHeight/2, 12, this.height/3);
+        ctx.moveTo(-12 * s, this.height/3);
+        ctx.quadraticCurveTo(-8 * s, this.height/3 + flameHeight/2, 0, this.height/3 + flameHeight);
+        ctx.quadraticCurveTo(8 * s, this.height/3 + flameHeight/2, 12 * s, this.height/3);
         ctx.closePath();
         ctx.fill();
 
         // Inner flame (yellow)
         ctx.fillStyle = '#f39c12';
         ctx.beginPath();
-        ctx.moveTo(-8, this.height/3);
-        ctx.quadraticCurveTo(-4, this.height/3 + flameHeight/2 - 5, 0, this.height/3 + flameHeight - 10);
-        ctx.quadraticCurveTo(4, this.height/3 + flameHeight/2 - 5, 8, this.height/3);
+        ctx.moveTo(-8 * s, this.height/3);
+        ctx.quadraticCurveTo(-4 * s, this.height/3 + flameHeight/2 - 5 * s, 0, this.height/3 + flameHeight - 10 * s);
+        ctx.quadraticCurveTo(4 * s, this.height/3 + flameHeight/2 - 5 * s, 8 * s, this.height/3);
         ctx.closePath();
         ctx.fill();
 
         // Core flame (white/yellow)
         ctx.fillStyle = '#ffeaa7';
         ctx.beginPath();
-        ctx.moveTo(-4, this.height/3);
-        ctx.quadraticCurveTo(-2, this.height/3 + flameHeight/3, 0, this.height/3 + flameHeight/2);
-        ctx.quadraticCurveTo(2, this.height/3 + flameHeight/3, 4, this.height/3);
+        ctx.moveTo(-4 * s, this.height/3);
+        ctx.quadraticCurveTo(-2 * s, this.height/3 + flameHeight/3, 0, this.height/3 + flameHeight/2);
+        ctx.quadraticCurveTo(2 * s, this.height/3 + flameHeight/3, 4 * s, this.height/3);
         ctx.closePath();
         ctx.fill();
     }
