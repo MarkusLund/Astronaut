@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romskip-Landing!</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1 class="title">ROMSKIP-LANDING!</h1>
+            <div class="rocket-animation">
+                <div class="menu-rocket">
+                    <div class="rocket-body"></div>
+                    <div class="rocket-window">
+                        <div class="eye left-eye"></div>
+                        <div class="eye right-eye"></div>
+                    </div>
+                    <div class="rocket-fin left-fin"></div>
+                    <div class="rocket-fin right-fin"></div>
+                    <div class="rocket-flame"></div>
+                </div>
+            </div>
+            <button id="start-button" class="big-button">START SPILLET</button>
+
+            <p class="level-select-label">Eller velg nivå:</p>
+            <div id="start-level-select" class="level-select-grid"></div>
+
+            <p class="instructions">Bruk piltastene til å styre romskipet!</p>
+            <div class="arrow-keys">
+                <div class="key up-key">↑</div>
+                <div class="key-row">
+                    <div class="key">←</div>
+                    <div class="key">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen hidden">
+            <canvas id="game-canvas"></canvas>
+            <div id="ui-overlay">
+                <div id="level-name">JORDEN</div>
+                <div id="stats">
+                    <div id="speed-display">
+                        <span class="stat-label">Fart:</span>
+                        <span id="speed-value" class="stat-value">0</span>
+                    </div>
+                    <div id="fuel-display">
+                        <span class="stat-label">Drivstoff:</span>
+                        <div id="fuel-bar">
+                            <div id="fuel-fill"></div>
+                        </div>
+                    </div>
+                </div>
+                <button id="sound-toggle" class="icon-button">🔊</button>
+            </div>
+        </div>
+
+        <!-- Message Overlay -->
+        <div id="message-overlay" class="hidden">
+            <div id="message-box">
+                <h2 id="message-title"></h2>
+                <p id="message-text"></p>
+                <button id="message-button" class="big-button"></button>
+            </div>
+            <div id="confetti-container"></div>
+        </div>
+
+        <!-- Level Complete Screen -->
+        <div id="win-screen" class="screen hidden">
+            <h1 class="title rainbow-text">GRATULERER!</h1>
+            <p class="win-text">Du klarte alle nivåene!</p>
+            <div class="stars">⭐ ⭐ ⭐</div>
+            <button id="restart-button" class="big-button">SPILL IGJEN</button>
+        </div>
+    </div>
+
+    <script src="js/sounds.js"></script>
+    <script src="js/levels.js"></script>
+    <script src="js/spaceship.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
