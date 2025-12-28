@@ -20,6 +20,7 @@ class Game {
 
         // Mobile detection
         this.isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        this.hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         this.isPortrait = window.innerHeight > window.innerWidth;
         this.scaleFactor = 1;
         this.tiltEnabled = false;
@@ -96,9 +97,15 @@ class Game {
         // Populate start menu level selector
         this.updateStartMenuLevelSelect();
 
-        // Initialize mobile controls
-        if (this.isMobile) {
+        // Initialize touch controls on any touch-capable device
+        if (this.hasTouch) {
             this.initTouchControls();
+            // Update instructions for touch-capable devices
+            this.setupTouchUI();
+        }
+
+        // Initialize mobile-specific controls (tilt, UI)
+        if (this.isMobile) {
             this.initTiltControls();
             this.setupMobileUI();
         }
@@ -200,6 +207,17 @@ class Game {
                 }
             });
         }
+    }
+
+    setupTouchUI() {
+        // Hide desktop-only instructions (arrow keys) for touch devices
+        document.querySelectorAll('.desktop-only').forEach(el => el.style.display = 'none');
+        // Show touch instructions (but not motion button - that's for isMobile only)
+        document.querySelectorAll('.mobile-only').forEach(el => {
+            if (!el.classList.contains('motion-btn')) {
+                el.style.display = 'block';
+            }
+        });
     }
 
     updateStartMenuLevelSelect() {
@@ -746,7 +764,7 @@ class Game {
         }
         levelsHtml += '</div>';
 
-        const retryHint = this.isMobile
+        const retryHint = this.hasTouch
             ? 'Trykk på skjermen for å prøve igjen!'
             : 'Trykk ↑ for å prøve igjen raskt!';
 
@@ -874,10 +892,10 @@ class Game {
         // Pulsing animation
         const pulse = 0.8 + 0.2 * Math.sin(Date.now() / 300);
 
-        // Different text and size for mobile
-        const message = this.isMobile ? 'Trykk for å starte!' : 'Trykk ↑ for å starte!';
-        const boxWidth = this.isMobile ? 280 : 360;
-        const fontSize = this.isMobile ? 24 : 28;
+        // Different text for touch vs keyboard, size for mobile
+        const message = this.hasTouch ? 'Trykk for å starte!' : 'Trykk ↑ for å starte!';
+        const boxWidth = this.hasTouch ? 280 : 360;
+        const fontSize = this.hasTouch ? 24 : 28;
 
         // Background box
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
