@@ -300,7 +300,7 @@ class Game {
             }
         }
 
-        // Generate craters for Moon/Mars
+        // Generate craters for Moon/Mars/Mercury/Pluto
         this.craters = [];
         if (this.currentLevel.features.craters) {
             for (let i = 0; i < 8; i++) {
@@ -310,9 +310,90 @@ class Game {
                 });
             }
         }
+
+        // Trees for Earth
+        this.trees = [];
+        if (this.currentLevel.features.trees) {
+            const groundY = this.canvas.height - this.groundHeight;
+            for (let i = 0; i < 12; i++) {
+                this.trees.push({
+                    x: Math.random() * this.canvas.width,
+                    height: 20 + Math.random() * 18,
+                    y: groundY
+                });
+            }
+        }
+
+        // Volcanoes (Venus)
+        this.volcanoes = [];
+        if (this.currentLevel.features.volcanoes) {
+            for (let i = 0; i < 3; i++) {
+                this.volcanoes.push({
+                    x: 100 + Math.random() * (this.canvas.width - 200),
+                    height: 60 + Math.random() * 40,
+                    width: 80 + Math.random() * 60
+                });
+            }
+        }
+
+        // Jupiter cloud bands
+        this.bands = [];
+        if (this.currentLevel.features.bands) {
+            const palette = this.currentLevel.bandColors || ['#e8b878', '#a06030', '#d4a574', '#7a4818'];
+            const count = 7;
+            for (let i = 0; i < count; i++) {
+                this.bands.push({
+                    y: (i / count) * (this.canvas.height - this.groundHeight),
+                    height: (this.canvas.height - this.groundHeight) / count + 1,
+                    color: palette[i % palette.length]
+                });
+            }
+        }
+
+        // Saturn rings (drawn arcing across sky)
+        this.rings = this.currentLevel.features.rings || false;
+
+        // Pluto heart (Tombaugh Regio) — bright nitrogen-ice patch on ground
+        this.iceHeart = this.currentLevel.features.iceHeart || false;
+
+        // Sun features
+        this.sunspots = [];
+        this.prominences = [];
+        if (this.currentLevel.features.sunspots) {
+            for (let i = 0; i < 5; i++) {
+                this.sunspots.push({
+                    x: Math.random() * this.canvas.width,
+                    y: this.canvas.height - this.groundHeight + 20 + Math.random() * 40,
+                    radius: 10 + Math.random() * 18
+                });
+            }
+        }
+        if (this.currentLevel.features.prominences) {
+            for (let i = 0; i < 4; i++) {
+                this.prominences.push({
+                    x: Math.random() * this.canvas.width,
+                    radius: 60 + Math.random() * 80,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Neptune dark spot
+        this.darkSpot = this.currentLevel.features.darkSpot
+            ? { x: this.canvas.width * (0.3 + Math.random() * 0.4), y: 100 + Math.random() * 80, rx: 70, ry: 35 }
+            : null;
     }
 
     handleKeyDown(e) {
+        // Esc opens level select from any in-game state
+        if (e.key === 'Escape') {
+            if (this.gameState === 'playing' || this.gameState === 'ready' || this.gameState === 'lost') {
+                e.preventDefault();
+                this.openLevelSelect();
+                return;
+            }
+        }
+
         // Start game when pressing up arrow in ready state
         if (this.gameState === 'ready') {
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
@@ -410,10 +491,19 @@ class Game {
         }
         this.landingPad.width = padWidth;
 
-        // Set landing pad position (use level's position or default to center)
-        const padPosition = this.currentLevel.landingPadPosition !== undefined
-            ? this.currentLevel.landingPadPosition
-            : 0.5;
+        // Set landing pad position (random off-center, level value, or default center)
+        let padPosition;
+        if (this.currentLevel.randomPosition) {
+            // Random in [0.1, 0.35] or [0.65, 0.9] — never near center
+            const leftSide = Math.random() < 0.5;
+            padPosition = leftSide
+                ? 0.1 + Math.random() * 0.25
+                : 0.65 + Math.random() * 0.25;
+        } else if (this.currentLevel.landingPadPosition !== undefined) {
+            padPosition = this.currentLevel.landingPadPosition;
+        } else {
+            padPosition = 0.5;
+        }
         // Calculate x position with padding from edges
         const padding = this.isMobile ? 30 : 50;
         const availableWidth = this.canvas.width - padding * 2 - this.landingPad.width;
@@ -653,8 +743,12 @@ class Game {
                 this.createExplosion(this.spaceship.x, this.spaceship.y);
             }
 
-            setTimeout(() => {
-                this.showLevelSelect(reason);
+            this.levelSelectTimeout = setTimeout(() => {
+                this.levelSelectTimeout = null;
+                // Only show menu if still in 'lost' state — user may have already retried
+                if (this.gameState === 'lost') {
+                    this.showLevelSelect(reason);
+                }
             }, showExplosion ? 1200 : 1500);
         }
     }
@@ -742,6 +836,20 @@ class Game {
         this.ctx.globalAlpha = 1;
     }
 
+    openLevelSelect() {
+        soundManager.playClick();
+        // Stop thrust + cancel pending crash menu
+        this.keys.up = false;
+        soundManager.stopThrust();
+        if (this.levelSelectTimeout) {
+            clearTimeout(this.levelSelectTimeout);
+            this.levelSelectTimeout = null;
+        }
+        // Pause gameplay so spaceship doesn't keep falling behind menu
+        this.gameState = 'paused';
+        this.showLevelSelect('Pause - velg en bane');
+    }
+
     showLevelSelect(reason) {
         const overlay = document.getElementById('message-overlay');
         const box = document.getElementById('message-box');
@@ -790,6 +898,10 @@ class Game {
 
     retryCurrentLevel() {
         soundManager.playClick();
+        if (this.levelSelectTimeout) {
+            clearTimeout(this.levelSelectTimeout);
+            this.levelSelectTimeout = null;
+        }
         document.getElementById('message-overlay').classList.add('hidden');
         this.loadLevel(this.currentLevelId);
         this.gameState = 'ready';
@@ -832,25 +944,92 @@ class Game {
         // Draw sky gradient
         this.drawSky();
 
-        // Draw stars
-        this.drawStars();
+        // Stars only when atmosphere is thin/none (Moon, Mercury, Pluto, deep space)
+        if (this.currentLevel.features.stars !== false) {
+            this.drawStars();
+        }
 
-        // Draw clouds (Earth only)
+        // Sun corona (behind everything else in sky)
+        if (this.currentLevel.features.corona) {
+            this.drawCorona();
+        }
+
+        // Jupiter/Saturn cloud bands (behind clouds)
+        if (this.currentLevel.features.bands) {
+            this.drawBands();
+        }
+
+        // Saturn rings — arc across the sky
+        if (this.currentLevel.features.rings) {
+            this.drawRings();
+        }
+
+        // Atmospheric haze (Venus, Uranus)
+        if (this.currentLevel.features.haze) {
+            this.drawHaze();
+        }
+
+        // Sun prominences (loops in sky)
+        if (this.currentLevel.features.prominences) {
+            this.drawProminences();
+        }
+
+        // Neptune dark spot
+        if (this.currentLevel.features.darkSpot) {
+            this.drawDarkSpot();
+        }
+
+        // Jupiter Great Red Spot
+        if (this.currentLevel.features.redSpot) {
+            this.drawRedSpot();
+        }
+
+        // Draw clouds
         if (this.currentLevel.features.clouds) {
             this.drawClouds();
+        }
+
+        // Neptune white methane streaks
+        if (this.currentLevel.features.streaks) {
+            this.drawStreaks();
         }
 
         // Draw ground
         this.drawGround();
 
-        // Draw craters (Moon/Mars)
+        // Pluto heart (white nitrogen ice patch on ground)
+        if (this.currentLevel.features.iceHeart) {
+            this.drawIceHeart();
+        }
+
+        // Mercury scarps (cliffs/ridges on ground)
+        if (this.currentLevel.features.scarps) {
+            this.drawScarps();
+        }
+
+        // Sunspots on solar surface
+        if (this.currentLevel.features.sunspots) {
+            this.drawSunspots();
+        }
+
+        // Draw craters (Moon/Mars/Mercury/Pluto)
         if (this.currentLevel.features.craters) {
             this.drawCraters();
         }
 
-        // Draw mountains (Mars)
+        // Draw mountains
         if (this.currentLevel.features.mountains) {
             this.drawMountains();
+        }
+
+        // Volcanoes (Venus)
+        if (this.currentLevel.features.volcanoes) {
+            this.drawVolcanoes();
+        }
+
+        // Trees (Earth)
+        if (this.currentLevel.features.trees) {
+            this.drawTrees();
         }
 
         // Draw landing pad
@@ -1152,6 +1331,208 @@ class Game {
         this.ctx.lineTo(this.canvas.width, groundY);
         this.ctx.closePath();
         this.ctx.fill();
+    }
+
+    drawTrees() {
+        const groundY = this.canvas.height - this.groundHeight;
+        this.trees.forEach(tree => {
+            // Trunk
+            this.ctx.fillStyle = '#4e342e';
+            this.ctx.fillRect(tree.x - 3, groundY - tree.height / 2, 6, tree.height / 2);
+            // Foliage
+            this.ctx.fillStyle = '#2e7d32';
+            this.ctx.beginPath();
+            this.ctx.arc(tree.x, groundY - tree.height / 2, tree.height / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.fillStyle = '#388e3c';
+            this.ctx.beginPath();
+            this.ctx.arc(tree.x - 5, groundY - tree.height / 2 - 4, tree.height / 3, 0, Math.PI * 2);
+            this.ctx.arc(tree.x + 5, groundY - tree.height / 2 - 2, tree.height / 3, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+    }
+
+    drawBands() {
+        this.bands.forEach((band, i) => {
+            this.ctx.fillStyle = band.color;
+            this.ctx.globalAlpha = 0.55;
+            // Slight wavy band
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, band.y);
+            const wave = 8;
+            for (let x = 0; x <= this.canvas.width; x += 40) {
+                this.ctx.lineTo(x, band.y + Math.sin((x / 80) + i) * wave);
+            }
+            this.ctx.lineTo(this.canvas.width, band.y + band.height);
+            this.ctx.lineTo(0, band.y + band.height);
+            this.ctx.closePath();
+            this.ctx.fill();
+        });
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawRedSpot() {
+        const cx = this.canvas.width * 0.7;
+        const cy = this.canvas.height * 0.45;
+        const grad = this.ctx.createRadialGradient(cx, cy, 10, cx, cy, 90);
+        grad.addColorStop(0, '#ffb199');
+        grad.addColorStop(0.5, '#d84315');
+        grad.addColorStop(1, 'rgba(191, 54, 12, 0)');
+        this.ctx.fillStyle = grad;
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, cy, 90, 55, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawRings() {
+        const cx = this.canvas.width / 2;
+        const cy = this.canvas.height * 0.35;
+        const ringColors = ['rgba(245,225,164,0.5)', 'rgba(201,176,120,0.4)', 'rgba(255,248,225,0.6)', 'rgba(138,120,72,0.35)'];
+        ringColors.forEach((c, i) => {
+            this.ctx.strokeStyle = c;
+            this.ctx.lineWidth = 6 + i * 2;
+            this.ctx.beginPath();
+            this.ctx.ellipse(cx, cy, this.canvas.width * 0.55 - i * 18, 38 - i * 4, -0.2, 0, Math.PI);
+            this.ctx.stroke();
+        });
+    }
+
+    drawHaze() {
+        const grad = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height - this.groundHeight);
+        const hazeColor = this.currentLevel.hazeColor || 'rgba(255,220,140,0.18)';
+        grad.addColorStop(0, 'rgba(255,255,255,0)');
+        grad.addColorStop(0.5, hazeColor);
+        grad.addColorStop(1, hazeColor);
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height - this.groundHeight);
+    }
+
+    drawCorona() {
+        const cx = this.canvas.width / 2;
+        const cy = this.canvas.height / 2;
+        const t = Date.now() / 1000;
+        const pulse = 0.85 + 0.15 * Math.sin(t * 1.5);
+        const r = Math.max(this.canvas.width, this.canvas.height) * 0.7 * pulse;
+        const grad = this.ctx.createRadialGradient(cx, cy, 50, cx, cy, r);
+        grad.addColorStop(0, 'rgba(255,255,200,0.4)');
+        grad.addColorStop(0.4, 'rgba(255,180,80,0.25)');
+        grad.addColorStop(1, 'rgba(255,90,0,0)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawProminences() {
+        const groundY = this.canvas.height - this.groundHeight;
+        const t = Date.now() / 1000;
+        this.prominences.forEach(p => {
+            const flick = 0.85 + 0.15 * Math.sin(t * 3 + p.phase);
+            const grad = this.ctx.createRadialGradient(p.x, groundY, 5, p.x, groundY, p.radius * flick);
+            grad.addColorStop(0, 'rgba(255,240,150,0.9)');
+            grad.addColorStop(0.4, 'rgba(255,150,50,0.6)');
+            grad.addColorStop(1, 'rgba(255,80,0,0)');
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, groundY, p.radius * flick, Math.PI, 2 * Math.PI);
+            this.ctx.fill();
+        });
+    }
+
+    drawSunspots() {
+        const groundY = this.canvas.height - this.groundHeight;
+        this.sunspots.forEach(s => {
+            this.ctx.fillStyle = 'rgba(180,80,0,0.85)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(s.x, s.y, s.radius * 1.4, s.radius * 0.5, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.fillStyle = 'rgba(60,20,0,0.9)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(s.x, s.y, s.radius * 0.7, s.radius * 0.25, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        // granulation specks
+        this.ctx.fillStyle = 'rgba(255,220,100,0.25)';
+        for (let i = 0; i < 30; i++) {
+            const x = (i * 137) % this.canvas.width;
+            const y = groundY + 5 + (i * 53) % (this.groundHeight - 10);
+            this.ctx.fillRect(x, y, 3, 3);
+        }
+    }
+
+    drawDarkSpot() {
+        if (!this.darkSpot) return;
+        const grad = this.ctx.createRadialGradient(this.darkSpot.x, this.darkSpot.y, 5, this.darkSpot.x, this.darkSpot.y, this.darkSpot.rx);
+        grad.addColorStop(0, 'rgba(20,30,80,0.85)');
+        grad.addColorStop(1, 'rgba(20,30,80,0)');
+        this.ctx.fillStyle = grad;
+        this.ctx.beginPath();
+        this.ctx.ellipse(this.darkSpot.x, this.darkSpot.y, this.darkSpot.rx, this.darkSpot.ry, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawStreaks() {
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        this.ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+            const y = 60 + i * 50;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            for (let x = 0; x <= this.canvas.width; x += 30) {
+                this.ctx.lineTo(x, y + Math.sin(x / 70 + i) * 6);
+            }
+            this.ctx.stroke();
+        }
+    }
+
+    drawIceHeart() {
+        const groundY = this.canvas.height - this.groundHeight;
+        // Bright nitrogen-ice patch on ground
+        this.ctx.fillStyle = 'rgba(248,240,225,0.85)';
+        this.ctx.beginPath();
+        const cx = this.canvas.width * 0.55;
+        const cy = groundY + this.groundHeight * 0.45;
+        const r = 60;
+        this.ctx.moveTo(cx, cy + r * 0.6);
+        this.ctx.bezierCurveTo(cx - r, cy + r * 0.2, cx - r, cy - r * 0.5, cx, cy - r * 0.1);
+        this.ctx.bezierCurveTo(cx + r, cy - r * 0.5, cx + r, cy + r * 0.2, cx, cy + r * 0.6);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    drawScarps() {
+        const groundY = this.canvas.height - this.groundHeight;
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        this.ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+            const x = (i + 1) * (this.canvas.width / 6) + (Math.sin(i) * 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, groundY + 10);
+            this.ctx.lineTo(x + 40, groundY + 5);
+            this.ctx.lineTo(x + 90, groundY + 20);
+            this.ctx.stroke();
+        }
+    }
+
+    drawVolcanoes() {
+        const groundY = this.canvas.height - this.groundHeight;
+        this.volcanoes.forEach(v => {
+            // Cone
+            this.ctx.fillStyle = '#5d2818';
+            this.ctx.beginPath();
+            this.ctx.moveTo(v.x - v.width / 2, groundY);
+            this.ctx.lineTo(v.x, groundY - v.height);
+            this.ctx.lineTo(v.x + v.width / 2, groundY);
+            this.ctx.closePath();
+            this.ctx.fill();
+            // Lava glow at peak
+            const grad = this.ctx.createRadialGradient(v.x, groundY - v.height, 2, v.x, groundY - v.height, 25);
+            grad.addColorStop(0, 'rgba(255,220,80,1)');
+            grad.addColorStop(0.5, 'rgba(255,90,0,0.7)');
+            grad.addColorStop(1, 'rgba(255,40,0,0)');
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath();
+            this.ctx.arc(v.x, groundY - v.height, 25, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
     }
 
     drawLandingPad() {
